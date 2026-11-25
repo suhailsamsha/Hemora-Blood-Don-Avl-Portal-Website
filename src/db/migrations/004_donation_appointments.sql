@@ -1,0 +1,2 @@
+ALTER TABLE donations ADD COLUMN time_slot TEXT NOT NULL DEFAULT '';
+ALTER TABLE donations ADD COLUMN centre_id TEXT REFERENCES blood_centres(id) ON DELETE SET NULL;
