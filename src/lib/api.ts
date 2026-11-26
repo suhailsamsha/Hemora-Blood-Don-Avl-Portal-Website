@@ -599,7 +599,10 @@ export const api = {
     }),
 
   getAdminNotifications: (token: string) =>
-    requestJson<{ notifications: AdminNotificationItem[] }>('/api/admin/notifications', {
+    requestJson<{
+      notifications: AdminNotificationItem[];
+      gatewayMode?: 'twilio' | 'webhook' | 'portal_queue';
+    }>('/api/admin/notifications', {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
@@ -613,7 +616,11 @@ export const api = {
       message: string;
     }
   ) =>
-    requestJson<{ id: string; recipientsCount: number }>('/api/admin/notifications', {
+    requestJson<{
+      id: string;
+      recipientsCount: number;
+      gatewayMode?: 'twilio' | 'webhook' | 'portal_queue';
+    }>('/api/admin/notifications', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),

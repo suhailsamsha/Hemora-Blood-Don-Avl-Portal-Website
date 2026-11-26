@@ -1,4 +1,4 @@
-import { useId, useRef, type MouseEvent, type ReactNode } from 'react';
+import { useId, useRef, type MouseEvent, type ReactNode, type RefObject } from 'react';
 import {
   motion,
   useMotionValue,
@@ -17,9 +17,15 @@ export const IOS_SPRING = {
   mass: 0.9,
 };
 
-export function ScrollProgressBar() {
+export function ScrollProgressBar({
+  containerRef,
+}: {
+  containerRef?: RefObject<HTMLElement | null>;
+} = {}) {
   const reducedMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll();
+  const { scrollYProgress } = useScroll(
+    containerRef ? { container: containerRef } : undefined
+  );
   const smoothProgress = useSpring(scrollYProgress, {
     stiffness: 140,
     damping: 28,
@@ -37,9 +43,15 @@ export function ScrollProgressBar() {
   );
 }
 
-export function LiquidCrimsonBackdrop() {
+export function LiquidCrimsonBackdrop({
+  containerRef,
+}: {
+  containerRef?: RefObject<HTMLElement | null>;
+} = {}) {
   const reducedMotion = useReducedMotion();
-  const { scrollY } = useScroll();
+  const { scrollY } = useScroll(
+    containerRef ? { container: containerRef } : undefined
+  );
   const smoothScrollY = useSpring(scrollY, {
     stiffness: 70,
     damping: 24,

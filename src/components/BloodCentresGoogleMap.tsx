@@ -8,8 +8,9 @@ import {
   useAdvancedMarkerRef,
   useMap,
 } from '@vis.gl/react-google-maps';
-import { Bookmark, BookmarkCheck, Crosshair, MapPin, Phone } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Crosshair, MapPin, Minus, Phone, Plus } from 'lucide-react';
 import type { BloodCentreView } from '../shared/types.ts';
+import { GlassSegmentedControl, Perspective3DCard } from './SmoothSection.tsx';
 
 interface BloodCentresGoogleMapProps {
   centres: BloodCentreView[];
@@ -21,6 +22,13 @@ interface BloodCentresGoogleMapProps {
   onToggleBookmark?: (centre: BloodCentreView) => void;
 }
 
+type MapViewMode = 'roadmap' | 'hybrid';
+
+const MAP_VIEW_OPTIONS = [
+  { value: 'roadmap' as const, label: 'Map' },
+  { value: 'hybrid' as const, label: 'Satellite' },
+];
+
 const MANGALURU_DEFAULT_CENTER = { lat: 12.874, lng: 74.848 };
 
 function toTelHref(phone: string): string {
@@ -31,12 +39,28 @@ function MapCameraController({
   centres,
   selectedCentreId,
   resetSignal,
+  mapType,
+  zoomCommand,
 }: {
   centres: BloodCentreView[];
   selectedCentreId: string | null;
   resetSignal: number;
+  mapType: MapViewMode;
+  zoomCommand: { delta: number; seq: number } | null;
 }) {
   const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    map.setMapTypeId(mapType);
+  }, [map, mapType]);
+
+  useEffect(() => {
+    if (!map || !zoomCommand) return;
+    const currentZoom = map.getZoom() ?? 12;
+    const nextZoom = Math.min(20, Math.max(4, currentZoom + zoomCommand.delta));
+    map.setZoom(nextZoom);
+  }, [map, zoomCommand]);
 
   useEffect(() => {
     if (!map || !selectedCentreId) return;
@@ -170,11 +194,17 @@ export function BloodCentresGoogleMap({
 }: BloodCentresGoogleMapProps) {
   const apiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim() ?? '';
   const [resetSignal, setResetSignal] = useState(0);
+  const [mapType, setMapType] = useState<MapViewMode>('roadmap');
+  const [zoomCommand, setZoomCommand] = useState<{ delta: number; seq: number } | null>(null);
 
   const handleResetView = useCallback(() => {
     onSelectCentre(null);
     setResetSignal((n) => n + 1);
   }, [onSelectCentre]);
+
+  const handleZoom = useCallback((delta: number) => {
+    setZoomCommand((prev) => ({ delta, seq: (prev?.seq ?? 0) + 1 }));
+  }, []);
 
   if (!apiKey) {
     return (
@@ -227,6 +257,10 @@ export function BloodCentresGoogleMap({
             defaultCenter={MANGALURU_DEFAULT_CENTER}
             defaultZoom={12}
             gestureHandling="greedy"
+            mapTypeControl={false}
+            zoomControl={false}
+            streetViewControl={false}
+            fullscreenControl={false}
             internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
             style={{ width: '100%', height: '100%' }}
           >
@@ -234,6 +268,8 @@ export function BloodCentresGoogleMap({
               centres={centres}
               selectedCentreId={selectedCentreId}
               resetSignal={resetSignal}
+              mapType={mapType}
+              zoomCommand={zoomCommand}
             />
             {centres.map((centre) => (
               <CentreMarkerItem
@@ -250,6 +286,66 @@ export function BloodCentresGoogleMap({
             ))}
           </GoogleMap>
         </APIProvider>
+
+        {/* iOS 26 Liquid Glass + 3D Tilt Map / Satellite Switcher */}
+        <div className="absolute top-3 left-3 z-20">
+          <Perspective3DCard
+            tiltStrength={6.5}
+            animateEntrance={false}
+            className="ios-hero-glass rounded-2xl p-0.5 shadow-[0_16px_36px_-10px_rgba(0,0,0,0.45)]"
+          >
+            <GlassSegmentedControl
+              ariaLabel="Map view style"
+              layoutId="gmap-type-segment"
+              size="sm"
+              value={mapType}
+              onChange={setMapType}
+              options={MAP_VIEW_OPTIONS}
+              className="!bg-transparent !border-transparent !shadow-none !backdrop-blur-none"
+            />
+          </Perspective3DCard>
+        </div>
+
+        {/* iOS 26 Liquid Glass + 3D Tilt Zoom & Recenter Stack */}
+        <div className="absolute bottom-7 right-3 z-20">
+          <Perspective3DCard
+            tiltStrength={6}
+            animateEntrance={false}
+            className="ios-hero-glass rounded-2xl p-1 shadow-[0_16px_36px_-10px_rgba(0,0,0,0.45)]"
+          >
+            <div className="flex flex-col items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => handleZoom(1)}
+                aria-label="Zoom in map"
+                title="Zoom in"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-[#1C1917] dark:text-[#F5F2EE] hover:bg-white/60 dark:hover:bg-white/10 hover:text-[#B3261E] dark:hover:text-[#F28B82] active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B3261E]"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <div className="w-5 h-px bg-[#1C1917]/10 dark:bg-white/15" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={() => handleZoom(-1)}
+                aria-label="Zoom out map"
+                title="Zoom out"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-[#1C1917] dark:text-[#F5F2EE] hover:bg-white/60 dark:hover:bg-white/10 hover:text-[#B3261E] dark:hover:text-[#F28B82] active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B3261E]"
+              >
+                <Minus className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <div className="w-5 h-px bg-[#1C1917]/10 dark:bg-white/15" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={handleResetView}
+                aria-label="Recenter Mangaluru map"
+                title="Recenter Mangaluru"
+                className="w-9 h-9 rounded-xl flex items-center justify-center text-[#B3261E] dark:text-[#F28B82] hover:bg-white/60 dark:hover:bg-white/10 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#B3261E]"
+              >
+                <Crosshair className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+          </Perspective3DCard>
+        </div>
       </div>
     </div>
   );

@@ -236,7 +236,7 @@ describe('Blood Donation Portal API end-to-end', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: process.env.ADMIN_EMAIL || 'admin@bloodportal.org',
-        password: process.env.ADMIN_PASSWORD || 'Admin@2026',
+        password: process.env.ADMIN_PASSWORD || 'ishu240707',
       }),
     });
     expect(adminLogin.status).toBe(200);
@@ -428,7 +428,7 @@ describe('Blood Donation Portal API end-to-end', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: process.env.ADMIN_EMAIL || 'admin@bloodportal.org',
-        password: process.env.ADMIN_PASSWORD || 'Admin@2026',
+        password: process.env.ADMIN_PASSWORD || 'ishu240707',
       }),
     });
     expect(adminLogin.status).toBe(200);

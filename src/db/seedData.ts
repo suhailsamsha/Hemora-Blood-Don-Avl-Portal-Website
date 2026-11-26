@@ -671,7 +671,7 @@ export function seedDatabase(db: Database.Database, options?: { force?: boolean 
 export function ensureAdminSeedData(db: Database.Database): void {
   const nowIso = new Date().toISOString();
   const adminEmail = (process.env.ADMIN_EMAIL || 'admin@bloodportal.org').trim().toLowerCase();
-  const adminPass = process.env.ADMIN_PASSWORD || 'Admin@2026';
+  const adminPass = process.env.ADMIN_PASSWORD || 'ishu240707';
   const adminName = process.env.ADMIN_NAME || 'Portal Coordinator';
 
   const tx = db.transaction(() => {

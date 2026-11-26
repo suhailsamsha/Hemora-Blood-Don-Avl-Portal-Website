@@ -137,6 +137,127 @@ export function getCityAreaOptions(city?: string): ReadonlyArray<CityAreaOption>
   return MANGALORE_AREAS;
 }
 
+export interface CityHospitalOption {
+  name: string;
+  area: string;
+  kind: 'Hospital' | 'Blood Bank' | 'Medical College';
+}
+
+export const CITY_HOSPITAL_SUGGESTIONS: Record<string, ReadonlyArray<CityHospitalOption>> = {
+  Mangaluru: [
+    { name: 'Wenlock District Hospital Blood Bank', area: 'Hampankatta', kind: 'Blood Bank' },
+    { name: 'Father Muller Medical College Hospital Blood Bank', area: 'Kankanady', kind: 'Blood Bank' },
+    { name: 'KMC Hospital Blood Centre, Attavar', area: 'Attavar', kind: 'Blood Bank' },
+    { name: 'AJ Hospital & Research Centre', area: 'Kuntikana', kind: 'Hospital' },
+    { name: 'KMC Hospital, Ambedkar Circle', area: 'Balmatta', kind: 'Hospital' },
+    { name: 'Lady Goschen Hospital', area: 'Hampankatta', kind: 'Hospital' },
+    { name: 'Yenepoya Medical College Hospital', area: 'Deralakatte', kind: 'Medical College' },
+    { name: 'Justice KS Hegde Charitable Hospital', area: 'Deralakatte', kind: 'Medical College' },
+    { name: 'Indiana Hospital & Heart Institute', area: 'Pumpwell', kind: 'Hospital' },
+    { name: 'Unity Hospital', area: 'Highland / Kankanady', kind: 'Hospital' },
+    { name: 'Highland Hospital', area: 'Falnir / Kankanady', kind: 'Hospital' },
+    { name: 'Mangalore Red Cross Blood Bank', area: 'Hampankatta', kind: 'Blood Bank' },
+    { name: 'Tejasvini Hospital', area: 'Kadri', kind: 'Hospital' },
+    { name: 'SCS Hospital', area: 'Balmatta', kind: 'Hospital' },
+  ],
+  Madurai: [
+    { name: 'Government Rajaji Hospital Blood Centre', area: 'Goripalayam', kind: 'Blood Bank' },
+    { name: 'Meenakshi Mission Hospital & Research Centre', area: 'Lake Area / Melur Rd', kind: 'Hospital' },
+    { name: 'Apollo Speciality Hospitals, Madurai', area: 'KK Nagar', kind: 'Hospital' },
+    { name: 'Velammal Medical College Hospital & Research Institute', area: 'Anuppanadi', kind: 'Medical College' },
+    { name: 'Vadamalayan Hospitals', area: 'Chokkikulam / Tallakulam', kind: 'Hospital' },
+    { name: 'Devadoss Hospital', area: 'Alagar Kovil Rd / Tallakulam', kind: 'Hospital' },
+    { name: 'Hannah Joseph Hospital', area: 'Chinthamani / Ring Rd', kind: 'Hospital' },
+    { name: 'Preethi Hospitals', area: 'KK Nagar', kind: 'Hospital' },
+    { name: 'Grace Kennett Foundation Hospital', area: 'Ellis Nagar / SS Colony', kind: 'Hospital' },
+    { name: 'Lions Blood Bank, Madurai', area: 'Anna Nagar', kind: 'Blood Bank' },
+    { name: 'Indian Red Cross Blood Bank, Madurai', area: 'Goripalayam', kind: 'Blood Bank' },
+  ],
+  Bengaluru: [
+    { name: 'Victoria Hospital Blood Bank', area: 'KR Market / Fort', kind: 'Blood Bank' },
+    { name: 'Bowring & Lady Curzon Hospital', area: 'Shivajinagar', kind: 'Hospital' },
+    { name: "St. John's Medical College Hospital", area: 'Koramangala', kind: 'Medical College' },
+    { name: 'Manipal Hospital, Old Airport Road', area: 'Indiranagar / HAL', kind: 'Hospital' },
+    { name: 'Narayana Health City', area: 'Electronic City / Bommasandra', kind: 'Hospital' },
+    { name: 'MS Ramaiah Memorial Hospital', area: 'Mathikere / Malleshwaram', kind: 'Medical College' },
+    { name: 'Fortis Hospital, Bannerghatta Road', area: 'Bannerghatta / Jayanagar', kind: 'Hospital' },
+    { name: 'Apollo Hospitals, Jayanagar', area: 'Jayanagar', kind: 'Hospital' },
+    { name: 'Aster CMI Hospital', area: 'Hebbal', kind: 'Hospital' },
+    { name: 'Rotary TTK Blood Bank', area: 'Thippasandra / Indiranagar', kind: 'Blood Bank' },
+    { name: 'Rashtrotthana Blood Centre', area: 'Gavipuram / Rajajinagar', kind: 'Blood Bank' },
+  ],
+  Chennai: [
+    { name: 'Rajiv Gandhi Government General Hospital Blood Bank', area: 'Park Town / Central', kind: 'Blood Bank' },
+    { name: 'Stanley Medical College Hospital', area: 'Royapuram', kind: 'Medical College' },
+    { name: 'Apollo Hospitals, Greams Road', area: 'Nungambakkam', kind: 'Hospital' },
+    { name: 'MIOT International', area: 'Manapakkam / Porur', kind: 'Hospital' },
+    { name: 'Kauvery Hospital, Alwarpet', area: 'Mylapore / Alwarpet', kind: 'Hospital' },
+    { name: 'Sri Ramachandra Medical Centre', area: 'Porur', kind: 'Medical College' },
+    { name: 'Kilpauk Medical College Hospital', area: 'Kilpauk / Anna Nagar', kind: 'Medical College' },
+    { name: 'Institute of Child Health & Hospital', area: 'Egmore', kind: 'Hospital' },
+    { name: 'Gleneagles HealthCity Chennai', area: 'Perumbakkam / Velachery', kind: 'Hospital' },
+    { name: 'VHS Blood Bank', area: 'Taramani / Adyar', kind: 'Blood Bank' },
+    { name: 'Lions Blood Bank, Chennai', area: 'Egmore', kind: 'Blood Bank' },
+  ],
+  Coimbatore: [
+    { name: 'Coimbatore Medical College Hospital (CMCH)', area: 'Gopalapuram / Central', kind: 'Blood Bank' },
+    { name: 'KMCH (Kovai Medical Center & Hospital)', area: 'Avinashi Rd / Peelamedu', kind: 'Hospital' },
+    { name: 'PSG Hospitals', area: 'Peelamedu', kind: 'Medical College' },
+    { name: 'Ganga Hospital', area: 'Mettupalayam Rd / Saibaba Colony', kind: 'Hospital' },
+    { name: 'G. Kuppuswamy Naidu Memorial Hospital (GKNM)', area: 'Pappanaickenpalayam', kind: 'Hospital' },
+    { name: 'Sri Ramakrishna Hospital', area: 'Sidhapudur / Gandhipuram', kind: 'Hospital' },
+    { name: 'Royal Care Super Speciality Hospital', area: 'Neelambur', kind: 'Hospital' },
+    { name: 'GEM Hospital & Research Centre', area: 'Ramanathapuram', kind: 'Hospital' },
+    { name: 'Indian Red Cross Blood Bank, Coimbatore', area: 'Race Course', kind: 'Blood Bank' },
+  ],
+  Hyderabad: [
+    { name: 'Osmania General Hospital Blood Bank', area: 'Afzal Gunj', kind: 'Blood Bank' },
+    { name: 'Gandhi Hospital & Medical College', area: 'Secunderabad', kind: 'Medical College' },
+    { name: "Nizam's Institute of Medical Sciences (NIMS)", area: 'Panjagutta / Banjara Hills', kind: 'Hospital' },
+    { name: 'Apollo Hospitals, Jubilee Hills', area: 'Jubilee Hills', kind: 'Hospital' },
+    { name: 'Yashoda Hospitals, Somajiguda', area: 'Somajiguda', kind: 'Hospital' },
+    { name: 'KIMS Hospitals, Secunderabad', area: 'Secunderabad', kind: 'Hospital' },
+    { name: 'CARE Hospitals, Banjara Hills', area: 'Banjara Hills', kind: 'Hospital' },
+    { name: 'AIG Hospitals, Gachibowli', area: 'Gachibowli / Madhapur', kind: 'Hospital' },
+    { name: 'Chiranjeevi Charitable Trust Blood Bank', area: 'Jubilee Hills', kind: 'Blood Bank' },
+    { name: 'Indian Red Cross Blood Bank, Vidyanagar', area: 'Vidyanagar', kind: 'Blood Bank' },
+  ],
+  Mumbai: [
+    { name: 'KEM Hospital Blood Bank', area: 'Parel', kind: 'Blood Bank' },
+    { name: 'Sion Hospital (LTMGH) Blood Bank', area: 'Sion', kind: 'Hospital' },
+    { name: 'Tata Memorial Hospital', area: 'Parel', kind: 'Hospital' },
+    { name: 'Sir JJ Group of Hospitals', area: 'Byculla', kind: 'Medical College' },
+    { name: 'Lilavati Hospital & Research Centre', area: 'Bandra West', kind: 'Hospital' },
+    { name: 'Kokilaben Dhirubhai Ambani Hospital', area: 'Andheri West', kind: 'Hospital' },
+    { name: 'Nanavati Max Super Speciality Hospital', area: 'Vile Parle / Andheri', kind: 'Hospital' },
+    { name: 'P. D. Hinduja Hospital', area: 'Mahim / Dadar', kind: 'Hospital' },
+    { name: 'Jaslok Hospital & Research Centre', area: 'Pedder Road / South Central', kind: 'Hospital' },
+    { name: 'Samarpan Blood Centre', area: 'Ghatkopar / Central Suburbs', kind: 'Blood Bank' },
+  ],
+  Delhi: [
+    { name: 'AIIMS Main Blood Bank', area: 'AIIMS / Ansari Nagar', kind: 'Blood Bank' },
+    { name: 'Safdarjung Hospital Blood Bank', area: 'Ansari Nagar West', kind: 'Hospital' },
+    { name: 'Dr. Ram Manohar Lohia (RML) Hospital', area: 'Connaught Place', kind: 'Hospital' },
+    { name: 'Lok Nayak (LNJP) Hospital', area: 'Jawaharlal Nehru Marg', kind: 'Hospital' },
+    { name: 'Sir Ganga Ram Hospital', area: 'Rajinder Nagar / Karol Bagh', kind: 'Hospital' },
+    { name: 'Indraprastha Apollo Hospital', area: 'Sarita Vihar / South', kind: 'Hospital' },
+    { name: 'Max Super Speciality Hospital, Saket', area: 'Saket', kind: 'Hospital' },
+    { name: 'Guru Teg Bahadur (GTB) Hospital', area: 'Dilshad Garden', kind: 'Medical College' },
+    { name: 'Fortis Escorts Heart Institute', area: 'Okhla / Lajpat Nagar', kind: 'Hospital' },
+    { name: 'Indian Red Cross Society Blood Bank', area: 'Parliament Street / Central', kind: 'Blood Bank' },
+  ],
+};
+
+export function getCityHospitalOptions(city?: string): ReadonlyArray<CityHospitalOption> {
+  if (!city) return CITY_HOSPITAL_SUGGESTIONS.Mangaluru;
+  const normalized = city.trim().toLowerCase();
+  const exactKey = Object.keys(CITY_HOSPITAL_SUGGESTIONS).find(
+    (k) => k.toLowerCase() === normalized
+  );
+  if (exactKey) return CITY_HOSPITAL_SUGGESTIONS[exactKey];
+  return [];
+}
+
 export function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
   const toRad = (deg: number) => (deg * Math.PI) / 180;

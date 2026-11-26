@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   BarChart3,
   Bell,
@@ -73,6 +73,13 @@ export function AdminLayout({ section, dark, onToggleDark, onNavigate }: AdminLa
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
+  const onNavigateRef = useRef(onNavigate);
+  onNavigateRef.current = onNavigate;
+
+  const mainScrollRef = useRef<HTMLDivElement | null>(null);
+  const scrollPositionsRef = useRef<Partial<Record<AdminSectionKey, number>>>({});
+  const prevSectionRef = useRef<AdminSectionKey>(section);
+
   const addToast = useCallback((type: 'success' | 'error', message: string) => {
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     setToasts((prev) => [...prev, { id, type, message }]);
@@ -86,23 +93,23 @@ export function AdminLayout({ section, dark, onToggleDark, onNavigate }: AdminLa
       if (err instanceof ApiError) {
         if (err.status === 401) {
           setAdminToken(null);
-          onNavigate('/admin/login');
+          onNavigateRef.current('/admin/login');
           return;
         }
         if (err.status === 403) {
           setAdminToken(null);
-          onNavigate('/');
+          onNavigateRef.current('/');
           return;
         }
       }
       addToast('error', (err as Error).message || 'Request failed.');
     },
-    [addToast, onNavigate]
+    [addToast]
   );
 
   useEffect(() => {
     if (!token) {
-      onNavigate('/admin/login');
+      onNavigateRef.current('/admin/login');
       return;
     }
 
@@ -117,7 +124,7 @@ export function AdminLayout({ section, dark, onToggleDark, onNavigate }: AdminLa
         if (cancelled) return;
         if (meData.user.role !== 'admin') {
           setAdminToken(null);
-          onNavigate('/');
+          onNavigateRef.current('/');
           return;
         }
         setAdminUser(meData.user);
@@ -133,7 +140,17 @@ export function AdminLayout({ section, dark, onToggleDark, onNavigate }: AdminLa
     return () => {
       cancelled = true;
     };
-  }, [token, onNavigate, handleAuthError]);
+  }, [token, handleAuthError]);
+
+  useLayoutEffect(() => {
+    const scroller = mainScrollRef.current;
+    if (!scroller) return;
+    if (prevSectionRef.current !== section) {
+      prevSectionRef.current = section;
+      const savedTop = scrollPositionsRef.current[section] ?? 0;
+      scroller.scrollTop = savedTop;
+    }
+  }, [section]);
 
   async function refreshOverview() {
     if (!token) return;
@@ -158,6 +175,9 @@ export function AdminLayout({ section, dark, onToggleDark, onNavigate }: AdminLa
   }
 
   function goToSection(next: string) {
+    if (mainScrollRef.current) {
+      scrollPositionsRef.current[section] = mainScrollRef.current.scrollTop;
+    }
     setSidebarOpen(false);
     const path = next === 'dashboard' ? '/admin' : `/admin/${next}`;
     onNavigate(path);
@@ -180,9 +200,9 @@ export function AdminLayout({ section, dark, onToggleDark, onNavigate }: AdminLa
   const activeNav = NAV_ITEMS.find((n) => n.key === section) ?? NAV_ITEMS[0];
 
   return (
-    <div className="relative min-h-screen flex bg-[#FAF8F6] dark:bg-[#141210] text-[#1C1917] dark:text-[#F5F2EE]">
-      <ScrollProgressBar />
-      <LiquidCrimsonBackdrop />
+    <div className="relative h-screen w-full overflow-hidden flex bg-[#FAF8F6] dark:bg-[#141210] text-[#1C1917] dark:text-[#F5F2EE]">
+      <ScrollProgressBar containerRef={mainScrollRef} />
+      <LiquidCrimsonBackdrop containerRef={mainScrollRef} />
 
       {/* Mobile Sidebar Backdrop */}
       {sidebarOpen && (
@@ -195,7 +215,7 @@ export function AdminLayout({ section, dark, onToggleDark, onNavigate }: AdminLa
 
       {/* Sidebar */}
       <aside
-        className={`no-print fixed lg:static inset-y-0 left-0 z-50 lg:z-20 w-64 shrink-0 border-r border-[#E2DDD6] dark:border-white/10 bg-white/80 dark:bg-[#191614]/80 backdrop-blur-2xl flex flex-col transition-transform duration-200 ${
+        className={`no-print fixed lg:static inset-y-0 left-0 z-50 lg:z-20 w-64 h-full shrink-0 border-r border-[#E2DDD6] dark:border-white/10 bg-white/80 dark:bg-[#191614]/80 backdrop-blur-2xl flex flex-col transition-transform duration-200 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
@@ -259,9 +279,9 @@ export function AdminLayout({ section, dark, onToggleDark, onNavigate }: AdminLa
       </aside>
 
       {/* Main Content Area */}
-      <div className="relative z-10 flex-1 min-w-0 flex flex-col">
+      <div className="relative z-10 flex-1 min-w-0 h-full flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="no-print h-16 px-4 sm:px-6 border-b border-[#E2DDD6] dark:border-white/10 bg-white/75 dark:bg-[#191614]/75 backdrop-blur-2xl flex items-center justify-between gap-4 sticky top-0 z-30">
+        <header className="no-print shrink-0 h-16 px-4 sm:px-6 border-b border-[#E2DDD6] dark:border-white/10 bg-white/75 dark:bg-[#191614]/75 backdrop-blur-2xl flex items-center justify-between gap-4 z-30">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -312,43 +332,48 @@ export function AdminLayout({ section, dark, onToggleDark, onNavigate }: AdminLa
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
-          {section === 'dashboard' && overview && (
-            <AdminOverviewSection overview={overview} onNavigateSection={goToSection} />
-          )}
-          {section === 'users' && (
-            <AdminUsersSection token={token} onToast={addToast} onAuthError={handleAuthError} />
-          )}
-          {section === 'stock' && (
-            <AdminStockSection token={token} onToast={addToast} onAuthError={handleAuthError} />
-          )}
-          {section === 'requests' && (
-            <AdminRequestsSection token={token} onToast={addToast} onAuthError={handleAuthError} />
-          )}
-          {section === 'donations' && (
-            <AdminDonationsSection token={token} onToast={addToast} onAuthError={handleAuthError} />
-          )}
-          {section === 'camps' && (
-            <AdminCampsSection token={token} onToast={addToast} onAuthError={handleAuthError} />
-          )}
-          {section === 'notifications' && (
-            <AdminNotificationsSection token={token} onToast={addToast} onAuthError={handleAuthError} />
-          )}
-          {section === 'reports' && (
-            <AdminReportsSection token={token} onToast={addToast} onAuthError={handleAuthError} />
-          )}
-          {section === 'content' && (
-            <AdminContentSection token={token} onToast={addToast} onAuthError={handleAuthError} />
-          )}
-          {section === 'settings' && (
-            <AdminSettingsSection
-              token={token}
-              currentAdmin={adminUser}
-              onToast={addToast}
-              onAuthError={handleAuthError}
-            />
-          )}
-        </main>
+        <div
+          ref={mainScrollRef}
+          className="flex-1 overflow-y-auto overscroll-contain"
+        >
+          <main className="p-4 sm:p-6 max-w-7xl w-full mx-auto">
+            {section === 'dashboard' && overview && (
+              <AdminOverviewSection overview={overview} onNavigateSection={goToSection} />
+            )}
+            {section === 'users' && (
+              <AdminUsersSection token={token} onToast={addToast} onAuthError={handleAuthError} />
+            )}
+            {section === 'stock' && (
+              <AdminStockSection token={token} onToast={addToast} onAuthError={handleAuthError} />
+            )}
+            {section === 'requests' && (
+              <AdminRequestsSection token={token} onToast={addToast} onAuthError={handleAuthError} />
+            )}
+            {section === 'donations' && (
+              <AdminDonationsSection token={token} onToast={addToast} onAuthError={handleAuthError} />
+            )}
+            {section === 'camps' && (
+              <AdminCampsSection token={token} onToast={addToast} onAuthError={handleAuthError} />
+            )}
+            {section === 'notifications' && (
+              <AdminNotificationsSection token={token} onToast={addToast} onAuthError={handleAuthError} />
+            )}
+            {section === 'reports' && (
+              <AdminReportsSection token={token} onToast={addToast} onAuthError={handleAuthError} />
+            )}
+            {section === 'content' && (
+              <AdminContentSection token={token} onToast={addToast} onAuthError={handleAuthError} />
+            )}
+            {section === 'settings' && (
+              <AdminSettingsSection
+                token={token}
+                currentAdmin={adminUser}
+                onToast={addToast}
+                onAuthError={handleAuthError}
+              />
+            )}
+          </main>
+        </div>
       </div>
 
       <ToastContainer

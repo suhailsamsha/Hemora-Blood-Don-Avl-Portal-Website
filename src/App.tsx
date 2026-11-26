@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ArrowUp, Cloud, Menu, Moon, Sun, X } from 'lucide-react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { AuthProvider, useFirebaseAuth } from './contexts/AuthContext.tsx';
@@ -95,13 +95,21 @@ function AppShell() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  function navigate(path: string) {
+  const handleToggleDark = useCallback(() => {
+    setDark((prev) => !prev);
+  }, []);
+
+  const navigate = useCallback((path: string) => {
     const url = new URL(path, window.location.origin);
     window.history.pushState({}, '', `${url.pathname}${url.search}`);
     setLocationState({ pathname: url.pathname, search: url.search });
     setMobileMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  }
+    const isAdminSubRoute =
+      url.pathname === '/admin' || url.pathname.startsWith('/admin/');
+    if (!isAdminSubRoute) {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+  }, []);
 
   const pathname = locationState.pathname.replace(/\/+$/, '') || '/';
   const searchParams = new URLSearchParams(locationState.search);
@@ -160,7 +168,7 @@ function AppShell() {
         <AdminLayout
           section={activeSection}
           dark={dark}
-          onToggleDark={() => setDark((prev) => !prev)}
+          onToggleDark={handleToggleDark}
           onNavigate={navigate}
         />
       </MotionConfig>

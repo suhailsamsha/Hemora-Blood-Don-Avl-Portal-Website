@@ -36,7 +36,17 @@ export function formatMatchRequestMessage(params: {
   return `[Blood Portal] ${params.urgency.toUpperCase()}: ${unitLabel} of ${params.bloodGroup} needed at ${params.hospital}, ${params.city}. Check Blood Requests Board if you are eligible to donate.`;
 }
 
-function triggerExternalGatewayAsync(params: {
+export function getNotificationGatewayMode(): 'twilio' | 'webhook' | 'portal_queue' {
+  const webhookUrl = process.env.ALERT_WEBHOOK_URL?.trim();
+  const twilioSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+  const twilioToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+  const twilioFrom = process.env.TWILIO_FROM_NUMBER?.trim();
+  if (twilioSid && twilioToken && twilioFrom) return 'twilio';
+  if (webhookUrl) return 'webhook';
+  return 'portal_queue';
+}
+
+export function triggerExternalGatewayAsync(params: {
   channel: AlertChannel;
   toPhone: string;
   messageText: string;

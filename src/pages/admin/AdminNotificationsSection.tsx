@@ -16,6 +16,7 @@ export function AdminNotificationsSection({
   onAuthError,
 }: AdminNotificationsSectionProps) {
   const [history, setHistory] = useState<AdminNotificationItem[]>([]);
+  const [gatewayMode, setGatewayMode] = useState<'twilio' | 'webhook' | 'portal_queue'>('portal_queue');
   const [channel, setChannel] = useState<'email' | 'in_app' | 'sms' | 'whatsapp'>('in_app');
   const [bloodGroup, setBloodGroup] = useState('ALL');
   const [city, setCity] = useState('ALL');
@@ -27,6 +28,7 @@ export function AdminNotificationsSection({
     try {
       const data = await api.getAdminNotifications(token);
       setHistory(data.notifications);
+      if (data.gatewayMode) setGatewayMode(data.gatewayMode);
     } catch (err) {
       onAuthError(err);
     }
@@ -48,7 +50,14 @@ export function AdminNotificationsSection({
         subject: subject.trim(),
         message: message.trim(),
       });
-      onToast('success', `Alert sent to ${res.recipientsCount} eligible donor(s).`);
+      const mode = res.gatewayMode ?? gatewayMode;
+      const statusSuffix =
+        (channel === 'sms' || channel === 'whatsapp') && mode !== 'portal_queue'
+          ? ` via ${mode === 'twilio' ? 'Twilio' : 'Webhook'}`
+          : channel === 'in_app'
+            ? ' in Donor Dashboard Inbox'
+            : ' in Donor Dashboard Inbox (external gateway not configured)';
+      onToast('success', `Queued for ${res.recipientsCount} eligible donor(s)${statusSuffix}.`);
       setSubject('');
       setMessage('');
       await loadHistory();
@@ -58,6 +67,17 @@ export function AdminNotificationsSection({
       setSending(false);
     }
   }
+
+  const channelStatusNote =
+    channel === 'in_app'
+      ? 'Active: delivers immediately inside each matching donor’s Donor Dashboard inbox.'
+      : channel === 'email'
+        ? 'Donor Dashboard Inbox only: donors register with mobile numbers and no SMTP email provider is configured.'
+        : gatewayMode === 'twilio'
+          ? `Active via Twilio (${channel.toUpperCase()}): sends to donor phones and logs to Donor Dashboard inbox.`
+          : gatewayMode === 'webhook'
+            ? `Active via Webhook (${channel.toUpperCase()}): forwards alerts to your configured webhook and logs to Donor Inbox.`
+            : 'Donor Dashboard Inbox only right now: set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN & TWILIO_FROM_NUMBER (or ALERT_WEBHOOK_URL) to send live carrier SMS/WhatsApp.';
 
   return (
     <div className="space-y-6">
@@ -115,6 +135,10 @@ export function AdminNotificationsSection({
             />
           </div>
         </div>
+
+        <p className="text-xs text-[#57534E] dark:text-[#A8A29E] leading-relaxed">
+          {channelStatusNote}
+        </p>
 
         <div>
           <label className="block text-xs font-medium text-[#57534E] dark:text-[#A8A29E] mb-1">Alert Subject</label>

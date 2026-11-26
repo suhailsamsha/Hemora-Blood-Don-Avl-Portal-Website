@@ -1,8 +1,19 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Check, CheckCircle2, UserPlus, X, XCircle } from 'lucide-react';
+import {
+  GlassAssignmentCombobox,
+  type AssignmentOptionItem,
+} from '../../components/GlassAssignmentCombobox.tsx';
 import { GlassSelect } from '../../components/GlassSelect.tsx';
 import { api } from '../../lib/api.ts';
-import type { BloodRequest } from '../../shared/types.ts';
+import {
+  getCityHospitalOptions,
+  type BloodCentreView,
+  type BloodRequest,
+  type BloodStockItem,
+  type DonationCamp,
+  type DonorPublic,
+} from '../../shared/types.ts';
 
 interface AdminRequestsSectionProps {
   token: string;
@@ -21,6 +32,11 @@ export function AdminRequestsSection({ token, onToast, onAuthError }: AdminReque
   const [assignTarget, setAssignTarget] = useState<BloodRequest | null>(null);
   const [assignedTo, setAssignedTo] = useState('');
 
+  const [stockItems, setStockItems] = useState<BloodStockItem[]>([]);
+  const [mangaloreCentres, setMangaloreCentres] = useState<BloodCentreView[]>([]);
+  const [camps, setCamps] = useState<DonationCamp[]>([]);
+  const [regionalDonors, setRegionalDonors] = useState<DonorPublic[]>([]);
+
   async function loadRequests() {
     setLoading(true);
     try {
@@ -35,8 +51,139 @@ export function AdminRequestsSection({ token, onToast, onAuthError }: AdminReque
 
   useEffect(() => {
     void loadRequests();
+    void api
+      .getAdminStock(token)
+      .then((res) => setStockItems(res.stock))
+      .catch(() => {});
+    void api
+      .getCentres()
+      .then((res) => setMangaloreCentres(res.centres))
+      .catch(() => {});
+    void api
+      .getAdminCamps(token)
+      .then((res) => setCamps(res.camps))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!assignTarget) {
+      setRegionalDonors([]);
+      return;
+    }
+    let cancelled = false;
+    void api
+      .searchDonors({
+        city: assignTarget.city,
+        bloodGroup: assignTarget.bloodGroup,
+        availableOnly: true,
+      })
+      .then((res) => {
+        if (!cancelled) setRegionalDonors(res.donors);
+      })
+      .catch(() => {
+        if (!cancelled) setRegionalDonors([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [assignTarget]);
+
+  const assignmentOptions = useMemo<AssignmentOptionItem[]>(() => {
+    if (!assignTarget) return [];
+    const region = assignTarget.city.trim();
+    const regionLower = region.toLowerCase();
+    const targetGroup = assignTarget.bloodGroup;
+    const seen = new Set<string>();
+    const options: AssignmentOptionItem[] = [];
+
+    const addOption = (item: AssignmentOptionItem) => {
+      const key = item.label.trim().toLowerCase();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      options.push(item);
+    };
+
+    // 1. Live Mangaluru Blood Centres (if request is in Mangaluru)
+    if (regionLower === 'mangaluru') {
+      for (const centre of mangaloreCentres) {
+        const matchingUnits = centre.stockByGroup?.[targetGroup] ?? 0;
+        addOption({
+          id: `ctr-${centre.id}`,
+          label: centre.name,
+          subtitle: `${centre.area} · ${centre.centreType}${centre.is24Hour ? ' · 24h' : ''}`,
+          category: centre.centreType === 'Blood bank' ? 'Blood Bank' : 'Hospital',
+          badge: matchingUnits > 0 ? `${matchingUnits} ${targetGroup}` : undefined,
+        });
+      }
+    }
+
+    // 2. Live stock locations in the target region
+    const cityStockByLoc = new Map<string, number>();
+    for (const s of stockItems) {
+      if (s.city.trim().toLowerCase() !== regionLower) continue;
+      if (s.bloodGroup === targetGroup) {
+        cityStockByLoc.set(s.location, (cityStockByLoc.get(s.location) ?? 0) + s.units);
+      } else if (!cityStockByLoc.has(s.location)) {
+        cityStockByLoc.set(s.location, 0);
+      }
+    }
+    for (const [locationName, units] of cityStockByLoc.entries()) {
+      addOption({
+        id: `stk-${locationName}`,
+        label: locationName,
+        subtitle: `${region} · Live Blood Stock Centre`,
+        category: 'Blood Bank',
+        badge: units > 0 ? `${units} ${targetGroup}` : undefined,
+      });
+    }
+
+    // 3. Curated hospitals & blood banks present in that particular region
+    for (const hosp of getCityHospitalOptions(region)) {
+      addOption({
+        id: `reg-${hosp.name}`,
+        label: hosp.name,
+        subtitle: `${hosp.area}, ${region} · ${hosp.kind}`,
+        category: hosp.kind,
+      });
+    }
+
+    // 4. Request's own hospital (in case it's a custom local clinic/hospital)
+    if (assignTarget.hospital.trim()) {
+      addOption({
+        id: `req-hosp-${assignTarget.id}`,
+        label: assignTarget.hospital.trim(),
+        subtitle: `${assignTarget.area ? `${assignTarget.area}, ` : ''}${region} · Requesting Hospital`,
+        category: 'Hospital',
+      });
+    }
+
+    // 5. Blood donation camps conducted in that region
+    for (const camp of camps) {
+      if (camp.status === 'cancelled') continue;
+      if (camp.city.trim().toLowerCase() !== regionLower) continue;
+      addOption({
+        id: `cmp-${camp.id}`,
+        label: `${camp.title} (${camp.organizer})`,
+        subtitle: `${camp.venue}, ${camp.city} · ${camp.campDate} · ${camp.status === 'upcoming' ? 'Upcoming Camp' : 'Conducted Camp'}`,
+        category: 'Camp',
+        badge: camp.status === 'upcoming' ? 'Upcoming' : 'Completed',
+      });
+    }
+
+    // 6. Eligible donors in that region
+    for (const donor of regionalDonors) {
+      addOption({
+        id: `dnr-${donor.id}`,
+        label: `${donor.firstName} (${donor.area})`,
+        subtitle: `${donor.area}, ${donor.city} · ${donor.bloodGroup} ${donor.verified ? 'Verified Donor' : 'Eligible Donor'}`,
+        category: 'Donor',
+        badge: donor.bloodGroup,
+      });
+    }
+
+    return options;
+  }, [assignTarget, camps, mangaloreCentres, regionalDonors, stockItems]);
 
   async function handleQuickAction(id: string, action: 'approve' | 'fulfill') {
     try {
@@ -326,14 +473,17 @@ export function AdminRequestsSection({ token, onToast, onAuthError }: AdminReque
               {assignTarget.city}
             </p>
             <div>
-              <label className="block text-xs font-medium text-[#57534E] dark:text-[#A8A29E] mb-1">Donor Name or Blood Bank</label>
-              <input
-                type="text"
-                required
+              <label className="block text-xs font-medium text-[#57534E] dark:text-[#A8A29E] mb-1">
+                Hospital, Blood Bank, Camp, or Donor in {assignTarget.city}
+              </label>
+              <GlassAssignmentCombobox
+                city={assignTarget.city}
+                bloodGroup={assignTarget.bloodGroup}
                 value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                placeholder="e.g. Wenlock District Hospital Blood Bank / Rakshith S."
-                className="w-full min-h-[44px] rounded-xl border border-[#E2DDD6] dark:border-white/10 bg-white/85 dark:bg-[#141210]/85 px-3 text-sm text-[#1C1917] dark:text-[#F5F2EE]"
+                onChange={setAssignedTo}
+                options={assignmentOptions}
+                required
+                placeholder={`Select hospital, blood bank, camp, or donor in ${assignTarget.city}`}
               />
             </div>
             <div className="flex justify-end gap-2">

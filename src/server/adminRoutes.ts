@@ -26,6 +26,7 @@ import {
   verifyPassword,
   verifySessionToken,
 } from './crypto.ts';
+import { getNotificationGatewayMode, triggerExternalGatewayAsync } from './notifications.ts';
 
 interface AdminUserRow {
   id: string;
@@ -1231,7 +1232,7 @@ export function createAdminRouter(db: Database.Database) {
       createdAt: n.created_at,
     }));
 
-    res.json({ notifications });
+    res.json({ notifications, gatewayMode: getNotificationGatewayMode() });
   });
 
   router.post('/notifications', requireAdmin, (req: Request, res: Response) => {
@@ -1257,6 +1258,7 @@ export function createAdminRouter(db: Database.Database) {
       id: string;
       blood_group: BloodGroup;
       city: string;
+      phone_encrypted: string;
       available: number;
       last_donation: string | null;
       last_confirmed_at: string;
@@ -1278,13 +1280,20 @@ export function createAdminRouter(db: Database.Database) {
     });
 
     const id = generateId('anf');
+    const fullText = `${subject}: ${message}`;
     const tx = db.transaction(() => {
       const insertDonorNotif = db.prepare(
         `INSERT INTO notifications_log (id, donor_id, channel, kind, message, created_at)
          VALUES (?, ?, ?, 'match_alert', ?, ?)`
       );
       for (const d of matching) {
-        insertDonorNotif.run(generateId('ntf'), d.id, channel === 'email' ? d.alert_channel : channel, `${subject}: ${message}`, nowIso);
+        insertDonorNotif.run(
+          generateId('ntf'),
+          d.id,
+          channel === 'email' ? d.alert_channel : channel,
+          fullText,
+          nowIso
+        );
       }
 
       db.prepare(
@@ -1294,16 +1303,34 @@ export function createAdminRouter(db: Database.Database) {
     });
     tx();
 
+    const gatewayMode =
+      channel === 'sms' || channel === 'whatsapp' ? getNotificationGatewayMode() : 'portal_queue';
+
+    if ((channel === 'sms' || channel === 'whatsapp') && gatewayMode !== 'portal_queue') {
+      for (const d of matching) {
+        try {
+          const toPhone = decryptPhone(d.phone_encrypted);
+          triggerExternalGatewayAsync({
+            channel,
+            toPhone,
+            messageText: fullText,
+          });
+        } catch {
+          // Ignore malformed encrypted phone rows without aborting broadcast
+        }
+      }
+    }
+
     recordAudit(
       db,
       admin.email,
       'send_broadcast_alert',
       'notification',
       id,
-      `Sent ${channel} alert (${bloodGroup}, ${city || 'ALL'}) to ${matching.length} eligible donor(s).`
+      `Sent ${channel} alert (${bloodGroup}, ${city || 'ALL'}) to ${matching.length} eligible donor(s) via ${gatewayMode}.`
     );
 
-    res.status(201).json({ id, recipientsCount: matching.length });
+    res.status(201).json({ id, recipientsCount: matching.length, gatewayMode });
   });
 
   // 8. Reports (Date-range Analytics, CSV Export, & Abuse Reports Moderation)
